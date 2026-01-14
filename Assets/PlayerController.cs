@@ -12,31 +12,46 @@ public class PlayerController : MonoBehaviour
     private Rigidbody2D rb;
     private bool isGrounded = true;
 
-    void Start()
+    void Awake()
     {
-        Debug.Log("✅ SCRIPT INICIADO: PlayerController listo.");
+        // Obtenemos las referencias necesarias
         rb = GetComponent<Rigidbody2D>();
+        Animator anim = GetComponent<Animator>();
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
 
-        // --- SISTEMA DE SKINS ---
-        // Recuperamos la skin guardada
+        // 1. OCULTAMOS el renderizador inmediatamente para que no se vea el "salto" de skin
+        if (sr != null) sr.enabled = false;
+
+        Debug.Log("✅ SCRIPT INICIADO: PlayerController listo.");
+
+        // --- NUEVA LÓGICA DE ANIMATOR ---
+        // Recuperamos la skin guardada en la tienda
         int skinID = PlayerPrefs.GetInt("SkinActiva", 0);
 
-        // Verificamos que el ID existe en tu lista
+        if (anim != null)
+        {
+            anim.SetInteger("SkinID", skinID);
+            // 2. FORZAMOS la actualización del Animator ahora mismo para que elija la skin correcta
+            anim.Update(0f);
+        }
+
+        // --- SISTEMA DE SKINS (EXISTENTE) ---
         if (skinID >= 0 && skinID < misSkins.Length)
         {
-            // Cambiamos el dibujo
-            GetComponent<SpriteRenderer>().sprite = misSkins[skinID];
-            // Aseguramos que el color sea blanco (original)
-            GetComponent<SpriteRenderer>().color = Color.white;
+            sr.sprite = misSkins[skinID];
+            sr.color = Color.white;
         }
         else
         {
             Debug.LogWarning("⚠️ Skin ID fuera de rango o lista vacía. Cargando skin por defecto.");
             if (misSkins.Length > 0)
             {
-                GetComponent<SpriteRenderer>().sprite = misSkins[0];
+                sr.sprite = misSkins[0];
             }
         }
+
+        // 3. MOSTRAMOS el personaje ya con la skin y animación cargadas
+        if (sr != null) sr.enabled = true;
     }
 
     void Update()
@@ -49,49 +64,41 @@ public class PlayerController : MonoBehaviour
         }
 
         // 2. SALTO VARIABLE (Saltar menos si sueltas la tecla)
-        // NOTA: Si usas Unity antiguo y 'linearVelocity' da error, cámbialo por 'velocity'
         if (Input.GetKeyUp(KeyCode.Space) && rb.linearVelocity.y > 0)
         {
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, rb.linearVelocity.y * 0.5f);
         }
     }
 
-    // --- COLISIONES FÍSICAS (Choques sólidos: Suelo, Pinchos, Paredes) ---
+    // --- COLISIONES FÍSICAS (Suelo, Obstáculos) ---
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        // EL CHIVATO: Nos dice contra qué nos hemos golpeado
         Debug.Log("💥 CHOQUE FÍSICO con: " + collision.gameObject.name + " | Tag: " + collision.gameObject.tag);
 
-        // Lógica del Suelo
         if (collision.gameObject.CompareTag("Ground"))
         {
             isGrounded = true;
         }
 
-        // Lógica de Muerte (Obstáculos)
         if (collision.gameObject.CompareTag("Obstacle"))
         {
             Debug.Log("💀 ¡MUERTE DETECTADA! Llamando a GameManager...");
-            
-            // Buscamos al Manager para avisar del Game Over
             GameManager gm = FindAnyObjectByType<GameManager>();
-            
+
             if (gm != null)
             {
                 gm.GameOver();
             }
             else
             {
-                Debug.LogError("🚨 ERROR: No encuentro el 'GameManager' en la escena. ¿Lo has puesto?");
+                Debug.LogError("🚨 ERROR: No encuentro el 'GameManager' en la escena.");
             }
         }
     }
 
-    // --- RECOLECCIÓN (Cosas que atraviesas: Monedas/Lágrimas) ---
+    // --- RECOLECCIÓN (Lágrimas) ---
     private void OnTriggerEnter2D(Collider2D other)
     {
-        // EL CHIVATO DE TRIGGERS
-        // Si pasas por una lágrima y no sale esto, es que la lágrima no tiene "Is Trigger" marcado.
         Debug.Log("👻 ATRAVESANDO OBJETO: " + other.gameObject.name + " | Tag: " + other.tag);
 
         if (other.CompareTag("Tear"))
@@ -100,10 +107,10 @@ public class PlayerController : MonoBehaviour
 
             if (gm != null)
             {
-                gm.AddTears(10); // Suma 10 lágrimas
+                gm.AddTears(10);
             }
 
-            Destroy(other.gameObject); // Borra la lágrima
+            Destroy(other.gameObject);
         }
     }
 }

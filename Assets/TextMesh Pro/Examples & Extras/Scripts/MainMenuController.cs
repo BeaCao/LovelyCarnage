@@ -20,7 +20,12 @@ public class MainMenuController : MonoBehaviour
     // Method called by the "Quit" button
     public void QuitGame()
     {
-        Application.Quit();
-        Debug.Log("The game has closed"); // Only visible in Unity Editor
+        Debug.Log("Saliendo de Lovely Carnage..."); // Chivato en consola
+        Application.Quit(); // Cierra el juego final (.exe)
+
+        // Esto hace que el botón también funcione mientras pruebas en Unity
+        #if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+        #endif
     }
 }
